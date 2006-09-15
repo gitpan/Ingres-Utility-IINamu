@@ -11,11 +11,11 @@ Ingres::Utility::IINamu -  API to IINamu Ingres utility for (un)registering serv
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 =head1 SYNOPSIS
 
@@ -123,7 +123,7 @@ sub show {
 			shift @antes;
 		}
 	}
-	$this->{stream} = join($RS,@antes);
+	$this->{stream} = join($/,@antes);
 	$this->{svrtype} = $server_type;
 	return $this->{stream};
 }
@@ -143,8 +143,8 @@ sub getServer {
 	if (! $this->{streamPtr}) {
 		$this->{streamPtr} = 0;
 	}
-	my @antes = split($RS,$this->{stream});
-	if ($#antes <= $this->{IINAMU_STREAM_PTR}) {
+	my @antes = split($/,$this->{stream});
+	if ($#antes <= $this->{streamPtr}) {
 		$this->{streamPtr} = 0;
 		return ();
 	}
@@ -162,7 +162,7 @@ After this, a total restart of Ingres will most probably be necessary.
 
 sub stop {
 	my $this = shift;
-	my $obj = $this->{IINAMU_XPCT};
+	my $obj = $this->{xpct};
 	$obj->send( 'STOP');
 	my $before = $obj->before;
 	while ($before =~ /\ \ /) {
@@ -248,6 +248,9 @@ None reported.
     (yet) handled, etc.
 
 No bugs have been reported.
+
+Please report any bugs or feature requests to C<bug-ingres-utility-iinamu at rt.cpan.org>,
+or through the web interface at L<http://rt.cpan.org>.
 
 
 =head1 SUPPORT
