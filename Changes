@@ -5,3 +5,7 @@ Revision history for Ingres-Utility-IINamu
 
 0.02    Thu Sep 15 2006
         Syntax correction
+
+0.03    Thu Sep 16 2006
+        Syntax corretction
+        META.yml added to distribuition
