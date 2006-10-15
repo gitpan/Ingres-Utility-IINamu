@@ -3,7 +3,6 @@ package Ingres::Utility::IINamu;
 use warnings;
 use strict;
 use Expect::Simple;
-use Data::Dump qw(dump);
 
 =head1 NAME
 
@@ -11,11 +10,11 @@ Ingres::Utility::IINamu -  API to IINAMU Ingres RDBMS utility
 
 =head1 VERSION
 
-Version 0.03
+Version 0.04
 
 =cut
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 =head1 SYNOPSIS
 
