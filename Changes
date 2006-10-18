@@ -9,3 +9,12 @@ Revision history for Ingres-Utility-IINamu
 0.03    Thu Sep 16 2006
         Syntax corretction
         META.yml added to distribuition
+
+0.04    Thu Oct 15 2006
+        Syntax corretction
+	First complete install through CPAN
+
+0.05	XXX
+        show(...) returned last command when iinamu returned empty
+	getSever() omitted last server info
+	Carp::carp "..." instead of die "..."

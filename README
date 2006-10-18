@@ -1,4 +1,4 @@
-Ingres-Utility-IINamu version 0.04
+Ingres-Utility-IINamu version 0.05
 
 This module provides an API to the iinamu utility for Ingres RDBMS,
 which provides local interaction and control of IIGCN server,

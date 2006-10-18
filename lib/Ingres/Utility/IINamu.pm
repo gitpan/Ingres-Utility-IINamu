@@ -3,6 +3,7 @@ package Ingres::Utility::IINamu;
 use warnings;
 use strict;
 use Expect::Simple;
+use Carp;
 
 =head1 NAME
 
@@ -10,11 +11,11 @@ Ingres::Utility::IINamu -  API to IINAMU Ingres RDBMS utility
 
 =head1 VERSION
 
-Version 0.04
+Version 0.05
 
 =cut
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 =head1 SYNOPSIS
 
@@ -74,12 +75,14 @@ sub new {
 	$class = ref($class) || $class;
 	bless $this, $class;
 	if (! defined($ENV{'II_SYSTEM'})) {
-		die $class . ": Ingres environment variable II_SYSTEM not set";
+		carp $class . ": Ingres environment variable II_SYSTEM not set";
+        return {};
 	}
 	my $iigcn_file = $ENV{'II_SYSTEM'} . '/ingres/bin/iinamu';
 	
 	if (! -x $iigcn_file) {
-		die $class . ": Ingres utility cannot be executed: $iigcn_file";
+		carp  $class . ": Ingres utility cannot be executed: $iigcn_file";
+        return {};
 	}
 	$this->{cmd} = $iigcn_file;
 	$this->{xpct} = new Expect::Simple {
@@ -89,7 +92,14 @@ sub new {
 				Verbose => 0,
 				Debug => 0,
 				Timeout => 10
-        } or die $this . ": Module Expect::Simple cannot be instanciated.";
+                } or do {
+                    carp $class . ": Module Expect::Simple cannot be instanciated.";
+                    return {};
+                };
+	$this->{stream}    = '';
+	$this->{streamPtr} = 0;
+	$this->{svrType}   = '';
+
 	return $this;
 }
 
@@ -114,13 +124,14 @@ sub show {
 		$before =~ s/\ \ /\ /g;
 	}
 	my @antes = split(/\r\n/,$before);
-	if ($#antes > 0) {
+	if ($#antes >= 0) {
 		if ($antes[0] eq $cmd) {
 			shift @antes;
 		}
 	}
-	$this->{stream} = join($/,@antes);
-	$this->{svrtype} = $server_type;
+	$this->{stream}    = join($/,@antes);
+	$this->{streamPtr} = 0;
+	$this->{svrType}   = $server_type;
 	return $this->{stream};
 }
 
@@ -136,11 +147,8 @@ sub getServer {
 	if (! $this->{stream}) {
 		return ();
 	}
-	if (! $this->{streamPtr}) {
-		$this->{streamPtr} = 0;
-	}
 	my @antes = split($/,$this->{stream});
-	if ($#antes <= $this->{streamPtr}) {
+	if ($#antes < $this->{streamPtr}) {
 		$this->{streamPtr} = 0;
 		return ();
 	}
@@ -166,6 +174,32 @@ sub stop {
 	}
 	my @antes = split(/\r\n/,$before);
 	return;
+	
+}
+
+=head2 add (not implemented yet)
+
+Register another server with IIGCN.
+
+=cut
+
+sub add {
+	my $this = shift;
+    carp $this . ": not implemented";
+    return;
+	
+}
+
+=head2 add (not implemented yet)
+
+Unregister a server with IIGCN.
+
+=cut
+
+sub del {
+	my $this = shift;
+    carp $this . ": not implemented";
+    return;
 	
 }
 
