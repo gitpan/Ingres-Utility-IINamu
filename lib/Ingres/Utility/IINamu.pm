@@ -7,15 +7,15 @@ use Carp;
 
 =head1 NAME
 
-Ingres::Utility::IINamu -  API to IINAMU Ingres RDBMS utility
+Ingres::Utility::IINamu -  API to C<iinamu> Ingres RDBMS utility
 
 =head1 VERSION
 
-Version 0.05
+Version 0.06
 
 =cut
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 =head1 SYNOPSIS
 
@@ -43,7 +43,7 @@ List registered INGRES (IIDBMS) services:
 
     }
     
-    # stop IIGCN server (no more connections to all of Ingres)
+    # stop IIGCN server (no more connections to all of Ingres services)
     $ret = $foo->stop();
     
     ...
@@ -51,37 +51,42 @@ List registered INGRES (IIDBMS) services:
 
 =head1 DESCRIPTION
 
-This module provides an API to the iinamu utility for Ingres RDBMS,
+This module provides an API to the C<iinamu> utility for Ingres RDBMS,
 which provides local interaction and control of IIGCN server,
 in charge of registering all Ingres services.
 
 Through this interface, it is possible to obtain a list of all
-registered services, for later processing (eg. iimonitor), and
-also stopping the IIGCN server (extreme caution!).
+registered services, for later processing (eg. C<iimonitor>), and
+also stopping the IIGCN server (EXTREME CAUTION: Ingres may need
+to be restarted!).
 
 
 =head1 FUNCTIONS
 
-=head2 new
+=over
+
+=item C<new()>
 
 Create a new instance, checking environment prerequisites
-and preparing for interfacing with iinamu utility.
+and preparing for interfacing with C<iinamu> utility.
+
+    $namu = Ingres::Utility::IINamu->new();
 
 =cut
 
-sub new {
+sub new() {
 	my $class = shift;
 	my $this = {};
 	$class = ref($class) || $class;
 	bless $this, $class;
 	if (! defined($ENV{'II_SYSTEM'})) {
-		carp $class . ": Ingres environment variable II_SYSTEM not set";
+		carp "Ingres environment variable II_SYSTEM not set";
         return {};
 	}
 	my $iigcn_file = $ENV{'II_SYSTEM'} . '/ingres/bin/iinamu';
 	
 	if (! -x $iigcn_file) {
-		carp  $class . ": Ingres utility cannot be executed: $iigcn_file";
+		carp "Ingres utility cannot be executed: $iigcn_file";
         return {};
 	}
 	$this->{cmd} = $iigcn_file;
@@ -93,26 +98,28 @@ sub new {
 				Debug => 0,
 				Timeout => 10
                 } or do {
-                    carp $class . ": Module Expect::Simple cannot be instanciated.";
+                    carp "Module Expect::Simple cannot be instanciated.";
                     return {};
                 };
 	$this->{stream}    = '';
 	$this->{streamPtr} = 0;
 	$this->{svrType}   = '';
-
 	return $this;
 }
 
-=head2 show($serverType)
+=item C<show(;$serverType)>
 
-Returns the output of SHOW command, and prepares for
-parsing the servers sequentially with getServer().
+Returns the output of C<SHOW> command, and prepares for
+parsing the servers sequentially with C<getServer()>.
 
-Takes one optional argument for the service: 'INGRES'(IIDBS, default), 'COMSVR' (IIGCC), etc.
+Takes one optional argument for the service: C<'INGRES'>(IIDBMS, default),
+C<'COMSVR'> (IIGCC), etc.
+
+    print $namu->show('COMSVR'); # show IIGCN servers
 
 =cut
 
-sub show {
+sub show(;$) {
 	my $this = shift;
 	my $server_type = uc (@_ ? shift : 'INGRES');
 	#print $this . ": cmd = $cmd";
@@ -135,14 +142,27 @@ sub show {
 	return $this->{stream};
 }
 
-=head2 getServer
+=item C<getServer()>
 
-Returns sequentially (call-after-call) each server reported by show() as an array of
-3~4 elements.
+Returns sequentially (call-after-call) each server reported by C<show()> as an array of
+3~4 elements:
+
+    # getServer()[0]: server type (INGRES, COMSVR, etc.)
+    # getServer()[1]: server name (as registered with IINAMU or add() method)
+    # getServer()[2]: server GCA address (given by INGSTART)
+    # getServer()[3]: extra info
+    
+    $namu->show('INGRES'); # prepare to show all INGRES (IIDBMS ) servers
+    
+    while (@svrs = $namu->getServer()) {
+        print "Server name: $svrs[1]\t address: $svrs[2]";
+        print "\t($svrs[3])" if (defined $svrs[3]);
+        print "\n"
+    }
 
 =cut
 
-sub getServer {
+sub getServer() {
 	my $this = shift;
 	if (! $this->{stream}) {
 		return ();
@@ -156,15 +176,17 @@ sub getServer {
 	return split(/\ /, $line);
 }
 
-=head2 stop
+=item C<stop()>
 
 Shuts down the IIGCN daemon, making it no longer possible to
 stablish new connections to any Ingres service.
 After this, a total restart of Ingres will most probably be necessary.
 
+    $namu->stop(); # no more connections (local remote, etc...)
+
 =cut
 
-sub stop {
+sub stop() {
 	my $this = shift;
 	my $obj = $this->{xpct};
 	$obj->send( 'STOP');
@@ -174,35 +196,72 @@ sub stop {
 	}
 	my @antes = split(/\r\n/,$before);
 	return;
-	
 }
 
-=head2 add (not implemented yet)
+=item C<add($serverType,$serverName,$serverAddr)>
 
-Register another server with IIGCN.
+Register another server with IIGCN, so that it can be available
+to clients.
+
+Parameters:
+
+    serverType: type of server (INGRES, COMSVR, etc.)
+    serverName: '*' or a name to individualize the server from the others
+    serverAddr: GCA address attributed during ingstart utility
+    
+    print $namu->add('COMSVR', '*', '123456'); # register IIGCN server
 
 =cut
 
-sub add {
+sub add($$$) {
 	my $this = shift;
-    carp $this . ": not implemented";
-    return;
-	
+	my $server_type = shift;
+	my $server_name = shift;
+	my $server_addr = shift;
+	my $obj = $this->{xpct};
+	$obj->send( "ADD $server_type $server_name $server_addr");
+	my $before = $obj->before;
+	while ($before =~ /\ \ /) {
+		$before =~ s/\ \ /\ /g;
+	}
+	my @antes = split(/\r\n/,$before);
+	return $before;
 }
 
-=head2 add (not implemented yet)
+=item C<del($serverType,$serverName,$serverAddr)>
 
-Unregister a server with IIGCN.
+
+Unregister another server with IIGCN, so that it will not be
+available to clients.
+
+A server can be registered later again.
+
+Parameters:
+
+    # serverType: type of server (INGRES, COMSVR, etc.)
+    # serverName: '*' or a name to individualize the server from the others
+    # serverAddr: GCA address attributed during ingstart utility
+    
+    print $namu->del('COMSVR', '*', '123456'); # this one is not seen anymore.
 
 =cut
 
-sub del {
+sub del($$$) {
 	my $this = shift;
-    carp $this . ": not implemented";
-    return;
-	
+	my $server_type = shift;
+	my $server_name = shift;
+	my $server_addr = shift;
+	my $obj = $this->{xpct};
+	$obj->send( "DEL $server_type $server_name $server_addr");
+	my $before = $obj->before;
+	while ($before =~ /\ \ /) {
+		$before =~ s/\ \ /\ /g;
+	}
+	my @antes = split(/\r\n/,$before);
+	return $before;
 }
 
+=back
 
 =head1 DIAGNOSTICS
 
@@ -212,20 +271,26 @@ sub del {
 
 Ingres environment variables should be set on the user session running
 this module.
-II_SYSTEM provides the root install dir (the one before 'ingres' dir).
-LD_LIBRARY_PATH also. See Ingres RDBMS docs.
+C<II_SYSTEM> provides the root install dir (the one before C<ingres> dir).
+C<LD_LIBRARY_PATH> also. See Ingres RDBMS docs.
 
 =item C<< Ingres utility cannot be executed: _COMMAND_FULL_PATH_ >>
 
-The IINAMU command could not be found or does not permits execution for
+The C<iinamu> command could not be found or does not permits execution for
 the current user.
+
+=item C<< Module Expect::Simple cannot be instanciated. >>
+
+The L<Expect::Simple> module could not be instanciated.
+The module is reponsible for interections with C<iinamu>
+utility. Debugging will be required.
 
 =back
 
 
 =head1 CONFIGURATION AND ENVIRONMENT
   
-Requires Ingres environment variables, such as II_SYSTEM and LD_LIBRARY_PATH.
+Requires Ingres environment variables, such as C<II_SYSTEM> and C<LD_LIBRARY_PATH>.
 
 See Ingres RDBMS documentation.
 
@@ -241,15 +306,6 @@ None reported.
 
 
 =head1 BUGS AND LIMITATIONS
-
-=for author to fill in:
-    A list of known problems with the module, together with some
-    indication Whether they are likely to be fixed in an upcoming
-    release. Also a list of restrictions on the features the module
-    does provide: data types that cannot be handled, performance issues
-    and the circumstances in which they may arise, practical
-    limitations on the size of data sets, special cases that are not
-    (yet) handled, etc.
 
 No bugs have been reported.
 
