@@ -11,11 +11,11 @@ Ingres::Utility::IINamu -  API to C<iinamu> Ingres RDBMS utility
 
 =head1 VERSION
 
-Version 0.06
+Version 0.07
 
 =cut
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
 =head1 SYNOPSIS
 
@@ -205,9 +205,9 @@ to clients.
 
 Parameters:
 
-    serverType: type of server (INGRES, COMSVR, etc.)
-    serverName: '*' or a name to individualize the server from the others
-    serverAddr: GCA address attributed during ingstart utility
+    # serverType: type of server (INGRES, COMSVR, etc.)
+    # serverName: '*' or a name to individualize the server from the others
+    # serverAddr: GCA address attributed during ingstart utility
     
     print $namu->add('COMSVR', '*', '123456'); # register IIGCN server
 
@@ -215,11 +215,12 @@ Parameters:
 
 sub add($$$) {
 	my $this = shift;
-	my $server_type = shift;
-	my $server_name = shift;
-	my $server_addr = shift;
+	my $server_type = uc (@_ ? shift : '');
+	my $server_name = @_ ? shift : '';
+	my $server_addr = @_ ? shift : '';
 	my $obj = $this->{xpct};
-	$obj->send( "ADD $server_type $server_name $server_addr");
+    my $cmd = "ADD $server_type $server_name $server_addr";
+	$obj->send($cmd);
 	my $before = $obj->before;
 	while ($before =~ /\ \ /) {
 		$before =~ s/\ \ /\ /g;
@@ -248,11 +249,12 @@ Parameters:
 
 sub del($$$) {
 	my $this = shift;
-	my $server_type = shift;
-	my $server_name = shift;
-	my $server_addr = shift;
+	my $server_type = uc (@_ ? shift : '');
+	my $server_name = @_ ? shift : '';
+	my $server_addr = @_ ? shift : '';
 	my $obj = $this->{xpct};
-	$obj->send( "DEL $server_type $server_name $server_addr");
+    my $cmd = "DEL $server_type $server_name $server_addr";
+	$obj->send($cmd);
 	my $before = $obj->before;
 	while ($before =~ /\ \ /) {
 		$before =~ s/\ \ /\ /g;
